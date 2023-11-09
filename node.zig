@@ -9,7 +9,7 @@ pub const Node = struct {
     latitude: f64,
     longitude: f64,
 
-    pub fn addConnection(self: *Self, node: *Node, drive_time: u16, distance: u16, speed_limit: u8) !void {
+    pub fn addConnection(self: *Self, node: *Node, drive_time: u32, distance: u32, speed_limit: u8) !void {
         const connection = Connection{
             .target = node,
             .drive_time = drive_time,
