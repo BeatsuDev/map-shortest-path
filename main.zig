@@ -1,6 +1,20 @@
 const std = @import("std");
+const Node = @import("node.zig").Node;
+const Connection = @import("connection.zig").Connection;
 
 const map_path = "maps/norden";
+
+pub fn main() !void {
+    const stdout = std.io.getStdOut().writer();
+
+    // Create arena allocator
+    var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const allocator = arena_allocator.allocator();
+    defer arena_allocator.deinit();
+
+    const nodes = try parseNodes(allocator, map_path ++ "/noder.txt");
+    try stdout.print("Node {d} connections: {d}\n", .{ 1, nodes[1].connections.items.len });
+}
 
 fn trim(s: []const u8) []const u8 {
     var start: usize = 0;
@@ -11,23 +25,39 @@ fn trim(s: []const u8) []const u8 {
     return s[start..end];
 }
 
-pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-
-    // Read the nodes
-    var buffer: [256]u8 = undefined;
-    var file = try std.fs.cwd().openFile(map_path ++ "/noder.txt", .{});
+fn parseNodes(allocator: std.mem.Allocator, nodes_file_path: []const u8) ![]Node {
+    // Open file
+    var file = try std.fs.cwd().openFile(nodes_file_path, .{});
     defer file.close();
 
+    // Create buffered file reader
     var buffered_reader = std.io.bufferedReader(file.reader());
     var reader = buffered_reader.reader();
 
+    // Read first line to get node count
+    var buffer: [32]u8 = undefined;
     const node_count_string = try reader.readUntilDelimiter(&buffer, '\n');
     const node_count = try std.fmt.parseInt(usize, trim(node_count_string), 10);
 
-    try stdout.print("Node count: {d}\n", .{node_count});
+    // Read nodes
+    var nodes = try allocator.alloc(Node, node_count);
+    var i: usize = 0;
+    while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| : (i += 1) {
+        var node_split_data = std.mem.splitAny(u8, line, "  ");
+        var node_id_string = node_split_data.first();
+        var node_latitude_string = node_split_data.next().?;
+        var node_longitude_string = node_split_data.next().?;
+        if (node_longitude_string.len == 0) {
+            node_longitude_string = node_split_data.next().?;
+        }
 
-    while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
-        try stdout.print("{s}\n", .{line});
+        nodes[i] = Node{
+            .id = try std.fmt.parseInt(usize, node_id_string, 10),
+            .connections = std.ArrayList(Connection).init(allocator),
+            .latitude = try std.fmt.parseFloat(f64, node_latitude_string),
+            .longitude = try std.fmt.parseFloat(f64, node_longitude_string),
+        };
     }
+
+    return nodes;
 }
