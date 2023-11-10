@@ -1,8 +1,10 @@
 const std = @import("std");
+const dijkstra = @import("dijkstra.zig").dijkstra;
+const getPath = @import("dijkstra.zig").getPath;
 const Node = @import("node.zig").Node;
 const Connection = @import("connection.zig").Connection;
 
-const map_path = "maps/island";
+const map_path = "maps/norden";
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -15,6 +17,14 @@ pub fn main() !void {
     var nodes = try parseNodes(allocator, map_path ++ "/noder.txt");
     try parseConnections(map_path ++ "/kanter.txt", &nodes);
     try stdout.print("Node {d} connections: {d}\n", .{ 1, nodes[1].connections.items.len });
+
+    var distance_map = try dijkstra(allocator, &nodes[2503331], nodes.len);
+    const connection_path = try getPath(allocator, distance_map, 2866570);
+    var drive_time: u32 = 0;
+    for (connection_path) |connection| {
+        drive_time += connection.drive_time;
+    }
+    try stdout.print("Drive time from 2503331 to 2866570: {d}\n", .{drive_time});
 }
 
 fn trim(s: []const u8) []const u8 {
@@ -36,7 +46,7 @@ fn parseNodes(allocator: std.mem.Allocator, nodes_file_path: []const u8) ![]Node
     var reader = buffered_reader.reader();
 
     // Read first line to get node count
-    var buffer: [32]u8 = undefined;
+    var buffer: [64]u8 = undefined;
     const node_count_string = try reader.readUntilDelimiter(&buffer, '\n');
     const node_count = try std.fmt.parseInt(usize, trim(node_count_string), 10);
     std.debug.print("Parsing {d} nodes.\n", .{node_count});
@@ -71,7 +81,7 @@ fn parseConnections(connections_file_path: []const u8, nodes: *[]Node) !void {
     var reader = buffered_reader.reader();
 
     // Read first line to get connections count
-    var buffer: [32]u8 = undefined;
+    var buffer: [128]u8 = undefined;
     const connection_count_string = try reader.readUntilDelimiter(&buffer, '\n');
     const connection_count = try std.fmt.parseInt(usize, trim(connection_count_string), 10);
     std.debug.print("Parsing {d} connections.\n", .{connection_count});
@@ -81,12 +91,12 @@ fn parseConnections(connections_file_path: []const u8, nodes: *[]Node) !void {
     while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| : (i += 1) {
         var it = std.mem.tokenizeScalar(u8, trim(line), '\t');
 
-        const from_node = try std.fmt.parseInt(usize, it.next().?, 10);
-        const to_node = try std.fmt.parseInt(usize, it.next().?, 10);
+        const from_node_id = try std.fmt.parseInt(usize, it.next().?, 10);
+        const to_node_id = try std.fmt.parseInt(usize, it.next().?, 10);
         const drive_time = try std.fmt.parseInt(u32, it.next().?, 10);
         const distance = try std.fmt.parseInt(u32, it.next().?, 10);
-        const speed_limit = try std.fmt.parseInt(u8, it.next().?, 10);
+        const speed_limit = try std.fmt.parseInt(u16, it.next().?, 10);
 
-        try nodes.*[from_node].addConnection(&nodes.*[to_node], drive_time, distance, speed_limit);
+        try nodes.*[from_node_id].addConnection(&nodes.*[to_node_id], drive_time, distance, speed_limit);
     }
 }
