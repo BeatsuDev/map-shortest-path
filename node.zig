@@ -20,3 +20,13 @@ pub const Node = struct {
         try self.connections.append(connection);
     }
 };
+
+pub const PriorityNode = struct {
+    priority: u32,
+    node: *Node,
+};
+
+pub fn comparePriorityNode(context: void, a: PriorityNode, b: PriorityNode) std.math.Order {
+    _ = context;
+    return std.math.order(a.priority, b.priority);
+}

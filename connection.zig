@@ -8,8 +8,3 @@ pub const Connection = struct {
     distance: u32,
     speed_limit: u16,
 };
-
-pub fn compareConnections(context: void, a: *const Connection, b: *const Connection) std.math.Order {
-    _ = context;
-    return std.math.order(a.drive_time, b.drive_time);
-}

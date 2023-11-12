@@ -4,7 +4,9 @@ const getPath = @import("dijkstra.zig").getPath;
 const Node = @import("node.zig").Node;
 const Connection = @import("connection.zig").Connection;
 
-const map_path = "maps/norden";
+const map_path = "maps/island";
+const start_node_id = 4000;
+const target_node_id = 5000;
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -16,15 +18,13 @@ pub fn main() !void {
 
     var nodes = try parseNodes(allocator, map_path ++ "/noder.txt");
     try parseConnections(map_path ++ "/kanter.txt", &nodes);
-    try stdout.print("Node {d} connections: {d}\n", .{ 1, nodes[1].connections.items.len });
+    try stdout.print("Node {d} connections: {d}\n", .{ start_node_id, nodes[start_node_id].connections.items.len });
 
-    var distance_map = try dijkstra(allocator, &nodes[2503331], nodes.len);
-    const connection_path = try getPath(allocator, distance_map, 2866570);
-    var drive_time: u32 = 0;
-    for (connection_path) |connection| {
-        drive_time += connection.drive_time;
-    }
-    try stdout.print("Drive time from 2503331 to 2866570: {d}\n", .{drive_time});
+    var distance_map = try dijkstra(allocator, &nodes[start_node_id], nodes.len);
+    const connection_path = try getPath(allocator, &distance_map, target_node_id);
+    try writePath("path.txt", connection_path);
+    std.debug.print("Path length: {d}\n", .{connection_path.len});
+    try stdout.print("Drive time from {d} to {d}: {d}\n", .{ start_node_id, target_node_id, distance_map.distance_array[target_node_id] / 100 });
 }
 
 fn trim(s: []const u8) []const u8 {
@@ -97,6 +97,18 @@ fn parseConnections(connections_file_path: []const u8, nodes: *[]Node) !void {
         const distance = try std.fmt.parseInt(u32, it.next().?, 10);
         const speed_limit = try std.fmt.parseInt(u16, it.next().?, 10);
 
+        // std.debug.print("Adding connection: {d} to {d} (weight: {d})\n", .{ from_node_id, to_node_id, drive_time });
+
         try nodes.*[from_node_id].addConnection(&nodes.*[to_node_id], drive_time, distance, speed_limit);
+    }
+}
+
+fn writePath(file_name: []const u8, connections: []*const Connection) !void {
+    var file = try std.fs.cwd().createFile(file_name, .{ .read = true });
+    var file_writer = file.writer();
+    defer file.close();
+
+    for (connections) |conn| {
+        try std.fmt.format(file_writer, "{d}\n", .{conn.to.id});
     }
 }
