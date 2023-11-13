@@ -4,9 +4,9 @@ const getPath = @import("dijkstra.zig").getPath;
 const Node = @import("node.zig").Node;
 const Connection = @import("connection.zig").Connection;
 
-const map_path = "maps/island";
-const start_node_id = 4000;
-const target_node_id = 5000;
+const map_path = "maps/norden";
+const start_node_id = 7826348;
+const target_node_id = 2948202;
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -24,7 +24,7 @@ pub fn main() !void {
     const connection_path = try getPath(allocator, &distance_map, target_node_id);
     try writePath("path.txt", connection_path);
     std.debug.print("Path length: {d}\n", .{connection_path.len});
-    try stdout.print("Drive time from {d} to {d}: {d}\n", .{ start_node_id, target_node_id, distance_map.distance_array[target_node_id] / 100 });
+    try stdout.print("Drive time from {d} to {d}: {d}\n", .{ start_node_id, target_node_id, distance_map.distance_array[target_node_id] });
 }
 
 fn trim(s: []const u8) []const u8 {
