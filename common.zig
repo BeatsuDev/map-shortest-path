@@ -99,12 +99,13 @@ pub fn getPath(allocator: std.mem.Allocator, distance_map: *DistanceMap, target:
     return connections.items[0..];
 }
 
-pub fn writePath(file_name: []const u8, connections: []*const Connection) !void {
+pub fn writePath(file_name: []const u8, nodes: *[]Node, connections: []*const Connection) !void {
     var file = try std.fs.cwd().createFile(file_name, .{ .read = true });
     var file_writer = file.writer();
     defer file.close();
 
     for (connections) |conn| {
-        try std.fmt.format(file_writer, "{d}\n", .{conn.to.id});
+        const node = nodes.*[conn.to.id];
+        try std.fmt.format(file_writer, "{d},{d}\n", .{ node.latitude, node.longitude });
     }
 }

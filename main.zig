@@ -1,8 +1,20 @@
 const std = @import("std");
-const dijkstra = @import("dijkstra.zig").dijkstra;
 const common = @import("common.zig");
+const Node = @import("node.zig").Node;
+const a_star = @import("a_star.zig").a_star;
 
-const map_path = "maps/island";
+const map_path = "maps/norden";
+
+fn heuristic(node_distance: u32, node: *Node, target: *Node) u64 {
+    const delta_lat = (node.latitude - target.latitude);
+    const delta_lon = (node.longitude - target.longitude);
+    const factor: f64 = 100 * (delta_lat * delta_lat) + (delta_lon * delta_lon);
+
+    const heuristic_value = std.math.lossyCast(u64, factor * @as(f64, @floatFromInt(node_distance)));
+
+    // std.debug.print("Factor: {d}\n", .{heuristic_value});
+    return heuristic_value;
+}
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -30,9 +42,9 @@ pub fn main() !void {
     try common.parseConnections(map_path ++ "/kanter.txt", &nodes);
     try stdout.print("Node {d} connections: {d}\n", .{ start_node_id, nodes[start_node_id].connections.items.len });
 
-    var distance_map = try dijkstra(allocator, &nodes[start_node_id], &nodes[target_node_id], nodes.len);
+    var distance_map = try a_star(allocator, &nodes[start_node_id], &nodes[target_node_id], heuristic, nodes.len);
     const connection_path = try common.getPath(allocator, &distance_map, target_node_id);
-    try common.writePath("path.txt", connection_path);
+    try common.writePath("path.txt", &nodes, connection_path);
     std.debug.print("Path edges: {d}\n", .{connection_path.len});
 
     var time = distance_map.distance_array[target_node_id];
