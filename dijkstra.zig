@@ -6,7 +6,7 @@ const Node = node_import.Node;
 
 const PriorityNode = struct {
     node: *Node,
-    priority: u32,
+    priority: u64,
 };
 
 fn comparePriorityNode(context: void, node1: PriorityNode, node2: PriorityNode) std.math.Order {
