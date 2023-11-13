@@ -9,15 +9,19 @@ const map_path = "maps/norden";
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     const stdin = std.io.getStdIn().reader();
+    _ = stdin;
 
-    var buffer: [30]u8 = undefined;
-    try stdout.print("Start node ID: ", .{});
-    const start_node_string = buffer[0..try stdin.read(&buffer)];
-    const start_node_id = try std.fmt.parseInt(usize, trim(start_node_string), 10);
+    // var buffer: [30]u8 = undefined;
+    // try stdout.print("Start node ID: ", .{});
+    // const start_node_string = buffer[0..try stdin.read(&buffer)];
+    // const start_node_id = try std.fmt.parseInt(usize, trim(start_node_string), 10);
 
-    try stdout.print("End node ID: ", .{});
-    const target_node_string = buffer[0..try stdin.read(&buffer)];
-    const target_node_id = try std.fmt.parseInt(usize, trim(target_node_string), 10);
+    // try stdout.print("End node ID: ", .{});
+    // const target_node_string = buffer[0..try stdin.read(&buffer)];
+    // const target_node_id = try std.fmt.parseInt(usize, trim(target_node_string), 10);
+
+    const start_node_id = 7826348;
+    const target_node_id = 2948202;
 
     // Create arena allocator
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -28,7 +32,7 @@ pub fn main() !void {
     try parseConnections(map_path ++ "/kanter.txt", &nodes);
     try stdout.print("Node {d} connections: {d}\n", .{ start_node_id, nodes[start_node_id].connections.items.len });
 
-    var distance_map = try dijkstra(allocator, &nodes[start_node_id], nodes.len);
+    var distance_map = try dijkstra(allocator, &nodes[start_node_id], null, nodes.len);
     const connection_path = try getPath(allocator, &distance_map, target_node_id);
     try writePath("path.txt", connection_path);
     std.debug.print("Path edges: {d}\n", .{connection_path.len});

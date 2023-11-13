@@ -15,7 +15,7 @@ fn comparePriorityNode(context: void, node1: PriorityNode, node2: PriorityNode) 
 }
 
 // Returns the shortest path of nodes from the start node to the goal node
-pub fn dijkstra(allocator: std.mem.Allocator, start: *Node, node_count: usize) !DistanceMap {
+pub fn dijkstra(allocator: std.mem.Allocator, start: *Node, target: ?*Node, node_count: usize) !DistanceMap {
     // Array to keep track of visited nodes
     var visited_nodes = try allocator.alloc(bool, node_count);
     @memset(visited_nodes, false);
@@ -34,6 +34,9 @@ pub fn dijkstra(allocator: std.mem.Allocator, start: *Node, node_count: usize) !
     });
 
     while (search_queue.removeOrNull()) |priority_node| {
+        if (target) |target_node| {
+            if (priority_node.node.id == target_node.id) break;
+        }
         try visitNode(priority_node.node, &visited_nodes, &priority_nodes, &search_queue, &distance_map);
     }
 
@@ -51,34 +54,38 @@ fn visitNode(node: *Node, visited_nodes: *[]bool, priority_nodes: *[]?PriorityNo
             continue;
 
         if (new_distance < distance_map.distance_array[connection.to.id]) {
-            // Update distances to neighbors
-            distance_map.distance_array[connection.to.id] = new_distance;
-            distance_map.previous_connection_array[connection.to.id] = connection;
+            try updateDistance(new_distance, connection, distance_map, priority_nodes, search_queue);
+        }
+    }
+}
 
-            var old_priority_node = priority_nodes.*[connection.to.id];
-            var new_priority_node = PriorityNode{
-                .node = connection.to,
-                .priority = new_distance,
-            };
-            priority_nodes.*[connection.to.id] = new_priority_node;
+fn updateDistance(new_distance: u32, connection: *Connection, distance_map: *DistanceMap, priority_nodes: *[]?PriorityNode, search_queue: *std.PriorityQueue(PriorityNode, void, comparePriorityNode)) !void {
+    // Update distances to neighbors
+    distance_map.distance_array[connection.to.id] = new_distance;
+    distance_map.previous_connection_array[connection.to.id] = connection;
 
-            // Update priority node if it was set, otherwise add it to the queue
-            if (old_priority_node) |old_pn| {
-                // Updating is wrong here!!!! >:( So we have to do a linear search
-                // and check the id manually instead... Maybe passing a context
-                // can solve this, but for now, linear search is still very fast.
-                // try search_queue.update(old_pn, new_priority_node);
-                for (search_queue.items, 0..) |priority_node, i| {
-                    if (priority_node.node.id == old_pn.node.id) {
-                        _ = search_queue.removeIndex(i);
-                        break;
-                    }
-                }
-                try search_queue.add(new_priority_node);
-            } else {
-                try search_queue.add(new_priority_node);
+    var old_priority_node = priority_nodes.*[connection.to.id];
+    var new_priority_node = PriorityNode{
+        .node = connection.to,
+        .priority = new_distance,
+    };
+    priority_nodes.*[connection.to.id] = new_priority_node;
+
+    // Update priority node if it was set, otherwise add it to the queue
+    if (old_priority_node) |old_pn| {
+        // Updating is wrong here!!!! >:( So we have to do a linear search
+        // and check the id manually instead... Maybe passing a context
+        // can solve this, but for now, linear search is still very fast.
+        // try search_queue.update(old_pn, new_priority_node);
+        for (search_queue.items, 0..) |priority_node, i| {
+            if (priority_node.node.id == old_pn.node.id) {
+                _ = search_queue.removeIndex(i);
+                break;
             }
         }
+        try search_queue.add(new_priority_node);
+    } else {
+        try search_queue.add(new_priority_node);
     }
 }
 
