@@ -5,11 +5,19 @@ const Node = @import("node.zig").Node;
 const Connection = @import("connection.zig").Connection;
 
 const map_path = "maps/norden";
-const start_node_id = 7826348;
-const target_node_id = 2948202;
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
+    const stdin = std.io.getStdIn().reader();
+
+    var buffer: [30]u8 = undefined;
+    try stdout.print("Start node ID: ", .{});
+    const start_node_string = buffer[0..try stdin.read(&buffer)];
+    const start_node_id = try std.fmt.parseInt(usize, trim(start_node_string), 10);
+
+    try stdout.print("End node ID: ", .{});
+    const target_node_string = buffer[0..try stdin.read(&buffer)];
+    const target_node_id = try std.fmt.parseInt(usize, trim(target_node_string), 10);
 
     // Create arena allocator
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -23,8 +31,10 @@ pub fn main() !void {
     var distance_map = try dijkstra(allocator, &nodes[start_node_id], nodes.len);
     const connection_path = try getPath(allocator, &distance_map, target_node_id);
     try writePath("path.txt", connection_path);
-    std.debug.print("Path length: {d}\n", .{connection_path.len});
-    try stdout.print("Drive time from {d} to {d}: {d}\n", .{ start_node_id, target_node_id, distance_map.distance_array[target_node_id] });
+    std.debug.print("Path edges: {d}\n", .{connection_path.len});
+
+    var time = distance_map.distance_array[target_node_id];
+    try stdout.print("Drive time from {d} to {d}: {d}\n", .{ start_node_id, target_node_id, time });
 }
 
 fn trim(s: []const u8) []const u8 {

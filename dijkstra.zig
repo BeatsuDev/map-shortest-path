@@ -53,6 +53,7 @@ fn visitNode(node: *Node, visited_nodes: *[]bool, priority_nodes: *[]?PriorityNo
         if (new_distance < distance_map.distance_array[connection.to.id]) {
             // Update distances to neighbors
             distance_map.distance_array[connection.to.id] = new_distance;
+            distance_map.previous_connection_array[connection.to.id] = connection;
 
             var old_priority_node = priority_nodes.*[connection.to.id];
             var new_priority_node = PriorityNode{
