@@ -64,7 +64,17 @@ fn visitNode(node: *Node, visited_nodes: *[]bool, priority_nodes: *[]?PriorityNo
 
             // Update priority node if it was set, otherwise add it to the queue
             if (old_priority_node) |old_pn| {
-                try search_queue.update(old_pn, new_priority_node);
+                // Updating is wrong here!!!! >:( So we have to do a linear search
+                // and check the id manually instead... Maybe passing a context
+                // can solve this, but for now, linear search is still very fast.
+                // try search_queue.update(old_pn, new_priority_node);
+                for (search_queue.items, 0..) |priority_node, i| {
+                    if (priority_node.node.id == old_pn.node.id) {
+                        _ = search_queue.removeIndex(i);
+                        break;
+                    }
+                }
+                try search_queue.add(new_priority_node);
             } else {
                 try search_queue.add(new_priority_node);
             }
