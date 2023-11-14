@@ -16,6 +16,8 @@ fn comparePriorityNode(context: void, node1: PriorityNode, node2: PriorityNode) 
 
 // Returns the shortest path of nodes from the start node to the goal node
 pub fn dijkstra(allocator: std.mem.Allocator, start: *Node, target: ?*Node, node_count: usize) !DistanceMap {
+    var checked_nodes: usize = 1;
+
     // Array to keep track of visited nodes
     var visited_nodes = try allocator.alloc(bool, node_count);
     @memset(visited_nodes, false);
@@ -37,9 +39,11 @@ pub fn dijkstra(allocator: std.mem.Allocator, start: *Node, target: ?*Node, node
         if (target) |target_node| {
             if (priority_node.node.id == target_node.id) break;
         }
+        checked_nodes += 1;
         try visitNode(priority_node.node, &visited_nodes, &priority_nodes, &search_queue, &distance_map);
     }
 
+    std.debug.print("Checked {d} nodes.\n", .{checked_nodes});
     return distance_map;
 }
 
@@ -87,55 +91,4 @@ fn updateDistance(new_distance: u32, connection: *Connection, distance_map: *Dis
     } else {
         try search_queue.add(new_priority_node);
     }
-}
-
-pub fn getPath(allocator: std.mem.Allocator, distance_map: *DistanceMap, target: usize) ![]*const Connection {
-    var connections = std.ArrayList(*const Connection).init(allocator);
-
-    var current_connection = distance_map.previous_connection_array[target];
-    while (current_connection) |connection| {
-        // std.debug.print("Current connection: {d} to {d}\n", .{ current_connection.?.from.id, current_connection.?.to.id });
-        if (connection.from.id == distance_map.start.id)
-            break;
-        try connections.append(connection);
-        current_connection = distance_map.previous_connection_array[connection.from.id];
-    }
-
-    if (current_connection) |connection| {
-        try connections.append(connection);
-    }
-
-    //  std.debug.print("Path length: {d}\n", .{connections.items.len});
-    return connections.items[0..];
-}
-
-test "Priority Node comparer" {
-    const allocator = std.testing.allocator;
-    var node1 = Node{
-        .id = 1,
-        .connections = std.ArrayList(Connection).init(allocator),
-        .latitude = 65.22,
-        .longitude = 55.22,
-    };
-    var node2 = Node{
-        .id = 2,
-        .connections = std.ArrayList(Connection).init(allocator),
-        .latitude = 25.22,
-        .longitude = 15.22,
-    };
-
-    var priority1 = PriorityNode{
-        .node = &node1,
-        .priority = 1,
-    };
-
-    var priority2 = PriorityNode{
-        .node = &node2,
-        .priority = 2,
-    };
-
-    var order = comparePriorityNode({}, &priority2, &priority1);
-    try std.testing.expectEqual(order, .gt);
-    order = comparePriorityNode({}, &priority1, &priority2);
-    try std.testing.expectEqual(order, .lt);
 }

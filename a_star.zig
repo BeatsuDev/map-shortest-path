@@ -15,10 +15,19 @@ fn comparePriorityNode(context: void, node1: *PriorityNode, node2: *PriorityNode
 }
 
 // Returns the shortest path of nodes from the start node to the goal node
-pub fn a_star(allocator: std.mem.Allocator, start: *Node, target: *Node, comptime heuristicFn: ?fn (u32, *Node, *Node) u64, node_count: usize) !DistanceMap {
+pub fn a_star(allocator: std.mem.Allocator, start: *Node, target: *Node, comptime heuristicFn: ?fn (*Node, *Node) u64, node_count: usize) !DistanceMap {
+    var checked_nodes: usize = 1;
+
     // Array to keep track of visited nodes
     var visited_nodes = try allocator.alloc(bool, node_count);
     @memset(visited_nodes, false);
+
+    // Array of PriorityNodes with corresponding index -> node.id
+    // This improves runtimes for long distance by 20x or more because of the O(1)
+    // lookup to see if the priority node is in the search_queue or not.
+    var nodes_in_search_queue = try allocator.alloc(bool, node_count);
+    @memset(nodes_in_search_queue, false);
+    defer allocator.free(nodes_in_search_queue);
 
     var search_queue = std.PriorityQueue(*PriorityNode, void, comparePriorityNode).init(allocator, {});
     var distance_map = try DistanceMap.init(allocator, start, node_count);
@@ -32,13 +41,16 @@ pub fn a_star(allocator: std.mem.Allocator, start: *Node, target: *Node, comptim
 
     while (search_queue.removeOrNull()) |priority_node| {
         if (priority_node.node.id == target.id) break;
-        try visitNode(allocator, priority_node.node, target, &visited_nodes, &search_queue, &distance_map, heuristicFn);
+        checked_nodes += 1;
+        try visitNode(allocator, priority_node.node, target, &visited_nodes, &nodes_in_search_queue, &search_queue, &distance_map, heuristicFn);
     }
+
+    std.debug.print("Checked {d} nodes.\n", .{checked_nodes});
 
     return distance_map;
 }
 
-fn visitNode(allocator: std.mem.Allocator, node: *Node, target: *Node, visited_nodes: *[]bool, search_queue: *std.PriorityQueue(*PriorityNode, void, comparePriorityNode), distance_map: *DistanceMap, comptime heuristicFn: ?fn (u32, *Node, *Node) u64) !void {
+fn visitNode(allocator: std.mem.Allocator, node: *Node, target: *Node, visited_nodes: *[]bool, nodes_in_search_queue: *[]bool, search_queue: *std.PriorityQueue(*PriorityNode, void, comparePriorityNode), distance_map: *DistanceMap, comptime heuristicFn: ?fn (*Node, *Node) u64) !void {
     // Set node to visited
     visited_nodes.*[node.id] = true;
 
@@ -49,25 +61,28 @@ fn visitNode(allocator: std.mem.Allocator, node: *Node, target: *Node, visited_n
         // Update distance and the priority node if this is a shorter distance
         const new_distance = distance_map.distance_array[node.id] + connection.drive_time;
         if (new_distance < distance_map.distance_array[connection.to.id]) {
-            try updateDistance(allocator, new_distance, connection, target, distance_map, search_queue, heuristicFn);
+            try updateDistance(allocator, new_distance, connection, target, distance_map, nodes_in_search_queue, search_queue, heuristicFn);
         }
     }
 }
 
-fn updateDistance(allocator: std.mem.Allocator, new_distance: u32, connection: *Connection, target: *Node, distance_map: *DistanceMap, search_queue: *std.PriorityQueue(*PriorityNode, void, comparePriorityNode), comptime heuristicFn: ?fn (u32, *Node, *Node) u64) !void {
+fn updateDistance(allocator: std.mem.Allocator, new_distance: u32, connection: *Connection, target: *Node, distance_map: *DistanceMap, nodes_in_search_queue: *[]bool, search_queue: *std.PriorityQueue(*PriorityNode, void, comparePriorityNode), comptime heuristicFn: ?fn (*Node, *Node) u64) !void {
     // Update distances to neighbors
     distance_map.distance_array[connection.to.id] = new_distance;
     distance_map.previous_connection_array[connection.to.id] = connection;
 
-    // Updating is wrong here!!!! >:( So we have to do a linear search
-    // and check the id manually instead... Maybe passing a context
-    // can solve this, but for now, linear search is still very fast.
-    for (0..search_queue.len) |i| {
-        const priority_node = search_queue.items[i];
-        if (priority_node.node.id == connection.to.id) {
-            _ = search_queue.removeIndex(i);
-            break;
+    if (nodes_in_search_queue.*[connection.to.id]) {
+        // Updating is wrong here!!!! >:( So we have to do a linear search
+        // and check the id manually instead... Maybe passing a context
+        // can solve this, but for now, linear search is still very fast.
+        for (0..search_queue.len) |i| {
+            const priority_node = search_queue.items[i];
+            if (priority_node.node.id == connection.to.id) {
+                _ = search_queue.removeIndex(i);
+                break;
+            }
         }
+        nodes_in_search_queue.*[connection.to.id] = true;
     }
 
     var new_priority_node = try allocator.create(PriorityNode);
@@ -75,7 +90,7 @@ fn updateDistance(allocator: std.mem.Allocator, new_distance: u32, connection: *
     if (heuristicFn) |heuristic| {
         new_priority_node.* = PriorityNode{
             .node = connection.to,
-            .priority = heuristic(new_distance, connection.to, target),
+            .priority = @as(u64, new_distance) + heuristic(connection.to, target),
         };
     } else {
         new_priority_node.* = PriorityNode{

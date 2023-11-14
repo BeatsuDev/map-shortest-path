@@ -12,6 +12,27 @@ pub fn trim(s: []const u8) []const u8 {
     return s[start..end];
 }
 
+pub fn formatTime(buffer: []u8, hundreds_of_seconds: u32) ![]const u8 {
+    const total_seconds = hundreds_of_seconds / 100;
+    const hours = total_seconds / 3600;
+    const minutes = (total_seconds / 60) % 60;
+    const seconds = total_seconds % 60;
+
+    var fixed_buffer_stream = std.io.fixedBufferStream(buffer);
+    var buffer_writer = fixed_buffer_stream.writer();
+    if (hours > 0) {
+        try buffer_writer.print("{d} hours, ", .{hours});
+    }
+
+    if (minutes > 0) {
+        try buffer_writer.print("{d} minutes, ", .{minutes});
+    }
+
+    try buffer_writer.print("{d} seconds", .{seconds});
+
+    return buffer[0..fixed_buffer_stream.pos];
+}
+
 pub fn parseNodes(allocator: std.mem.Allocator, nodes_file_path: []const u8) ![]Node {
     // Open file
     var file = try std.fs.cwd().openFile(nodes_file_path, .{});
