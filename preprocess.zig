@@ -53,7 +53,10 @@ pub fn main() !void {
     const end_time = std.time.milliTimestamp();
 
     for (landmarks, 0..) |landmark, i| {
-        std.debug.print("Landmark {d}: {d}, {d}\n", .{ i + 1, landmark.node.latitude, landmark.node.longitude });
+        std.debug.print("Writing files for landmark {d}: {d}, {d}\n", .{ i + 1, landmark.node.latitude, landmark.node.longitude });
+
+        var buffer: [16]u8 = undefined;
+        try writeLandmark(try std.fmt.bufPrint(&buffer, "landmark_{d}", .{i}), &landmark);
     }
 
     try stdout.print("Preprocessing took: {d}ms\n\n", .{end_time - start_time});
@@ -72,6 +75,40 @@ fn createLandmark(allocator: std.mem.Allocator, landmark: *Landmark, nodes: *[]N
 
     @memcpy(landmark.from, distance_map.distance_array);
     @memcpy(landmark.to, opposite_distance_map.distance_array);
+}
+
+fn writeLandmark(landmark_name: []const u8, landmark: *const Landmark) !void {
+    const allocator = std.heap.page_allocator;
+
+    const from_distance_file_name = try allocator.alloc(u8, landmark_name.len + 5);
+    const to_distance_file_name = try allocator.alloc(u8, landmark_name.len + 3);
+
+    defer allocator.free(from_distance_file_name);
+    defer allocator.free(to_distance_file_name);
+
+    @memcpy(from_distance_file_name[0..], landmark_name);
+    @memcpy(from_distance_file_name[landmark_name.len..], ".from");
+
+    @memcpy(to_distance_file_name[0..], landmark_name);
+    @memcpy(to_distance_file_name[landmark_name.len..], ".to");
+
+    const from_file = try std.fs.cwd().createFile(from_distance_file_name, .{ .read = true });
+    var from_buffered_writer = std.io.bufferedWriter(from_file.writer());
+    const from_buffered_file_writer = from_buffered_writer.writer();
+    defer from_file.close();
+
+    for (0..landmark.from.len) |i| {
+        try from_buffered_file_writer.writeInt(u32, landmark.from[i], .Big);
+    }
+
+    const to_file = try std.fs.cwd().createFile(to_distance_file_name, .{ .read = true });
+    var to_buffered_writer = std.io.bufferedWriter(to_file.writer());
+    const to_buffered_file_writer = to_buffered_writer.writer();
+    defer to_file.close();
+
+    for (0..landmark.to.len) |i| {
+        try to_buffered_file_writer.writeInt(u32, landmark.to[i], .Big);
+    }
 }
 
 fn printNode(node: Node) void {
