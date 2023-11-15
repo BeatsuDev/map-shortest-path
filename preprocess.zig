@@ -2,12 +2,10 @@ const std = @import("std");
 const common = @import("common.zig");
 const Node = @import("node.zig").Node;
 const DistanceMap = @import("distance_map.zig").DistanceMap;
+const Landmark = @import("landmark.zig").Landmark;
 const dijkstra = @import("dijkstra.zig").dijkstra;
-const a_star = @import("a_star.zig").a_star;
 
 const map_path = "maps/norden";
-
-const Landmark = struct { node: *Node, from: []u32, to: []u32 };
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -53,7 +51,7 @@ pub fn main() !void {
     const end_time = std.time.milliTimestamp();
 
     for (landmarks, 0..) |landmark, i| {
-        std.debug.print("Writing files for landmark {d}: {d}, {d}\n", .{ i + 1, landmark.node.latitude, landmark.node.longitude });
+        std.debug.print("Writing files for landmark {d}: node {d}\n", .{ i + 1, landmark.node_id });
 
         var buffer: [16]u8 = undefined;
         try writeLandmark(try std.fmt.bufPrint(&buffer, "landmark_{d}", .{i}), &landmark);
@@ -63,7 +61,7 @@ pub fn main() !void {
 }
 
 fn createLandmark(allocator: std.mem.Allocator, landmark: *Landmark, nodes: *[]Node, opposite_nodes: *[]Node, node_id: usize) !void {
-    landmark.node = &nodes.*[node_id];
+    landmark.node_id = node_id;
     landmark.from = try allocator.alloc(u32, nodes.len);
     landmark.to = try allocator.alloc(u32, nodes.len);
 
@@ -97,6 +95,8 @@ fn writeLandmark(landmark_name: []const u8, landmark: *const Landmark) !void {
     const from_buffered_file_writer = from_buffered_writer.writer();
     defer from_file.close();
 
+    try from_buffered_file_writer.writeInt(usize, landmark.node_id, .Big);
+
     for (0..landmark.from.len) |i| {
         try from_buffered_file_writer.writeInt(u32, landmark.from[i], .Big);
     }
@@ -105,6 +105,8 @@ fn writeLandmark(landmark_name: []const u8, landmark: *const Landmark) !void {
     var to_buffered_writer = std.io.bufferedWriter(to_file.writer());
     const to_buffered_file_writer = to_buffered_writer.writer();
     defer to_file.close();
+
+    try to_buffered_file_writer.writeInt(usize, landmark.node_id, .Big);
 
     for (0..landmark.to.len) |i| {
         try to_buffered_file_writer.writeInt(u32, landmark.to[i], .Big);
