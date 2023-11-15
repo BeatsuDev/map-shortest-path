@@ -68,6 +68,38 @@ pub fn parseNodes(allocator: std.mem.Allocator, nodes_file_path: []const u8) ![]
     return nodes;
 }
 
+pub fn parseOppositeConnection(connections_file_path: []const u8, nodes: *[]Node) !void {
+    // Open file
+    var file = try std.fs.cwd().openFile(connections_file_path, .{});
+    defer file.close();
+
+    // Create buffered file reader
+    var buffered_reader = std.io.bufferedReader(file.reader());
+    var reader = buffered_reader.reader();
+
+    // Read first line to get connections count
+    var buffer: [128]u8 = undefined;
+    const connection_count_string = try reader.readUntilDelimiter(&buffer, '\n');
+    const connection_count = try std.fmt.parseInt(usize, trim(connection_count_string), 10);
+    std.debug.print("Parsing {d} connections.\n", .{connection_count});
+
+    // Read connections
+    var i: usize = 0;
+    while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| : (i += 1) {
+        var it = std.mem.tokenizeScalar(u8, trim(line), '\t');
+
+        const to_node_id = try std.fmt.parseInt(usize, it.next().?, 10);
+        const from_node_id = try std.fmt.parseInt(usize, it.next().?, 10);
+        const drive_time = try std.fmt.parseInt(u32, it.next().?, 10);
+        const distance = try std.fmt.parseInt(u32, it.next().?, 10);
+        const speed_limit = try std.fmt.parseInt(u16, it.next().?, 10);
+
+        // std.debug.print("Adding connection: {d} to {d} (weight: {d})\n", .{ from_node_id, to_node_id, drive_time });
+
+        try nodes.*[from_node_id].addConnection(&nodes.*[to_node_id], drive_time, distance, speed_limit);
+    }
+}
+
 pub fn parseConnections(connections_file_path: []const u8, nodes: *[]Node) !void {
     // Open file
     var file = try std.fs.cwd().openFile(connections_file_path, .{});

@@ -1,3 +1,7 @@
 main
 main.o
 path.txt
+preprocess
+preprocess.o
+maps/**/*.txt
+
