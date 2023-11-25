@@ -39,6 +39,7 @@ pub fn dijkstra(allocator: std.mem.Allocator, start: *Node, target: ?*Node, node
         if (target) |target_node| {
             if (priority_node.node.id == target_node.id) break;
         }
+        if (visited_nodes[priority_node.node.id]) continue;
         checked_nodes += 1;
         try visitNode(priority_node.node, &visited_nodes, &priority_nodes, &search_queue, &distance_map);
     }
@@ -68,27 +69,10 @@ fn updateDistance(new_distance: u32, connection: *Connection, distance_map: *Dis
     distance_map.distance_array[connection.to.id] = new_distance;
     distance_map.previous_connection_array[connection.to.id] = connection;
 
-    var old_priority_node = priority_nodes.*[connection.to.id];
     var new_priority_node = PriorityNode{
         .node = connection.to,
         .priority = new_distance,
     };
     priority_nodes.*[connection.to.id] = new_priority_node;
-
-    // Update priority node if it was set, otherwise add it to the queue
-    if (old_priority_node) |old_pn| {
-        // Updating is wrong here!!!! >:( So we have to do a linear search
-        // and check the id manually instead... Maybe passing a context
-        // can solve this, but for now, linear search is still very fast.
-        // try search_queue.update(old_pn, new_priority_node);
-        for (search_queue.items, 0..) |priority_node, i| {
-            if (priority_node.node.id == old_pn.node.id) {
-                _ = search_queue.removeIndex(i);
-                break;
-            }
-        }
-        try search_queue.add(new_priority_node);
-    } else {
-        try search_queue.add(new_priority_node);
-    }
+    try search_queue.add(new_priority_node);
 }

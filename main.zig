@@ -38,21 +38,21 @@ fn alt_heuristic(node: *Node, target: *Node, landmarks: *[]Landmark) u64 {
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
-    const stdin = std.io.getStdIn().reader();
+    // const stdin = std.io.getStdIn().reader();
 
-    var buffer: [30]u8 = undefined;
-    try stdout.print("Start node ID: ", .{});
-    const start_node_string = buffer[0..try stdin.read(&buffer)];
-    const start_node_id = try std.fmt.parseInt(usize, common.trim(start_node_string), 10);
+    // var buffer: [30]u8 = undefined;
+    // try stdout.print("Start node ID: ", .{});
+    // const start_node_string = buffer[0..try stdin.read(&buffer)];
+    // const start_node_id = try std.fmt.parseInt(usize, common.trim(start_node_string), 10);
 
-    try stdout.print("End node ID: ", .{});
-    const target_node_string = buffer[0..try stdin.read(&buffer)];
-    const target_node_id = try std.fmt.parseInt(usize, common.trim(target_node_string), 10);
-    try stdout.print("\n", .{});
+    // try stdout.print("End node ID: ", .{});
+    // const target_node_string = buffer[0..try stdin.read(&buffer)];
+    // const target_node_id = try std.fmt.parseInt(usize, common.trim(target_node_string), 10);
+    // try stdout.print("\n", .{});
 
     // Trondheim to Oslo
-    // const start_node_id = 7826348;
-    // const target_node_id = 2948202;
+    const start_node_id = 7826348;
+    const target_node_id = 2948202;
 
     // Create arena allocator
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -122,7 +122,7 @@ pub fn main() !void {
     try stdout.print("A* took: {d}ms\n\n", .{a_star_end_time - a_star_start_time});
 
     // ALT
-    try stdout.print("Running ALT...\n", .{});
+    try stdout.print("Running ALT...\n(NOT IMPLEMENTED YET)\n", .{});
 
     // Load ALT Landmarks
     const landmark0 = try common.parseLandmark(allocator, "landmark_0");
