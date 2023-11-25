@@ -7,7 +7,7 @@ const find_nearest_interest_points = @import("find_nearest_interest_points.zig")
 const a_star = @import("a_star.zig").a_star;
 const alt = @import("alt.zig").alt;
 
-const map_path = "maps/norden";
+const map_path = "maps/island";
 
 fn heuristic(node: *Node, target: *Node) u64 {
     const delta_lat = (node.latitude - target.latitude) * 111_195;
@@ -50,9 +50,9 @@ pub fn main() !void {
     // const target_node_id = try std.fmt.parseInt(usize, common.trim(target_node_string), 10);
     // try stdout.print("\n", .{});
 
-    // Trondheim to Oslo
-    const start_node_id = 7826348;
-    const target_node_id = 2948202;
+    // Reykjavik to Bakkagerði
+    const start_node_id = 104736;
+    const target_node_id = 106158;
 
     // Create arena allocator
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -71,6 +71,7 @@ pub fn main() !void {
 
     const interest_point_start_time = std.time.milliTimestamp();
     const interest_points = try common.parseInterestPoints(allocator, map_path ++ "/interessepkt.txt");
+    _ = interest_points;
     const interest_point_end_time = std.time.milliTimestamp();
     try stdout.print("Parsing interest points took {d}ms.\n\n", .{interest_point_end_time - interest_point_start_time});
 
@@ -91,20 +92,20 @@ pub fn main() !void {
     try stdout.print("Dijkstra took: {d}ms\n\n", .{dijkstra_end_time - dijkstra_start_time});
 
     // Finding nearest interest points
-    try stdout.print("Finding nearest interest points...\n", .{});
-    const trondheim_camping = 3005466;
-    const start_time = std.time.milliTimestamp();
-    var drinking_places = try find_nearest_interest_points(allocator, &nodes[trondheim_camping], 16, nodes.len, interest_points, 5);
-    const end_time = std.time.milliTimestamp();
+    // try stdout.print("Finding nearest interest points...\n", .{});
+    // const trondheim_camping = 3005466;
+    // const start_time = std.time.milliTimestamp();
+    // var drinking_places = try find_nearest_interest_points(allocator, &nodes[trondheim_camping], 16, nodes.len, interest_points, 5);
+    // const end_time = std.time.milliTimestamp();
 
-    for (drinking_places) |drinking_place| {
-        try stdout.print("Found drinking place: {s} ({d}, {d})\n", .{
-            drinking_place.name,
-            nodes[drinking_place.node_id].latitude,
-            nodes[drinking_place.node_id].longitude,
-        });
-    }
-    try stdout.print("Found interest points in {d}ms\n\n", .{end_time - start_time});
+    // for (drinking_places) |drinking_place| {
+    //     try stdout.print("Found drinking place: {s} ({d}, {d})\n", .{
+    //         drinking_place.name,
+    //         nodes[drinking_place.node_id].latitude,
+    //         nodes[drinking_place.node_id].longitude,
+    //     });
+    // }
+    // try stdout.print("Found interest points in {d}ms\n\n", .{end_time - start_time});
 
     // A*
     try stdout.print("Running A*...\n", .{});
